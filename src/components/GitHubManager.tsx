@@ -406,6 +406,22 @@ export const GitHubManager: React.FC<GitHubManagerProps> = ({
           </div>
           <span className="text-neutral-500 font-mono text-[10px]">Workflow: .github/workflows/ci.yml</span>
         </div>
+
+        {/* GitHub Pages Setup Guide */}
+        <div className="p-3 bg-neutral-950 border border-blue-900/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-[11px]">
+          <div className="flex items-center gap-2 text-neutral-300">
+            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+            <span>Deploy to GitHub Pages: Go to <strong>Settings → Pages → Build and deployment → Source: "GitHub Actions"</strong></span>
+          </div>
+          <a
+            href="https://maijied.github.io/CLoraMF/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 font-bold underline"
+          >
+            maijied.github.io/CLoraMF/ ↗
+          </a>
+        </div>
       </div>
     </div>
   );

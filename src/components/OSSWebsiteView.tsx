@@ -148,6 +148,17 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
             <Watch className="w-4 h-4 text-emerald-400" />
             <span>Launch Live Hardware Simulator</span>
           </button>
+
+          <a
+            href="https://maijied.github.io/CLoraMF/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-3 bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-bold uppercase transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Globe className="w-4 h-4 text-blue-400" />
+            <span>GitHub Pages: CLoraMF</span>
+            <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
+          </a>
         </div>
 
         {/* Subtle dot matrix aesthetic element */}
@@ -286,6 +297,28 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
             <span className="px-2 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-bold uppercase">
               ALL BUILDS VERIFIED
             </span>
+          </div>
+
+          {/* GitHub Pages Host Info Banner */}
+          <div className="p-4 bg-neutral-950 border-2 border-blue-900/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-blue-400" />
+                <span className="font-bold text-white uppercase">Hosting on GitHub Pages (https://maijied.github.io/CLoraMF/)</span>
+              </div>
+              <p className="text-neutral-400 text-[11px]">
+                To activate GitHub Pages for your repo: on GitHub, go to <strong>Settings → Pages → Source: "GitHub Actions"</strong>. The automated CI/CD pipeline in <span className="text-neutral-300">.github/workflows/ci.yml</span> will deploy this portal and all downloads automatically on push.
+              </p>
+            </div>
+            <a
+              href="https://maijied.github.io/CLoraMF/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase text-[11px] flex items-center gap-1.5 whitespace-nowrap transition-colors"
+            >
+              <span>Visit Site</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
