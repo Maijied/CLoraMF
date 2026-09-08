@@ -384,14 +384,25 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDownload(art)}
-                  disabled={downloadingId === art.id}
-                  className="w-full py-3 bg-[#FF5C00] hover:bg-white text-black font-black uppercase text-xs tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{downloadingId === art.id ? 'Packaging Archive...' : `Download ${art.name.split(' ')[0]}`}</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDownload(art)}
+                    disabled={downloadingId === art.id}
+                    className="flex-1 py-3 bg-[#FF5C00] hover:bg-white text-black font-black uppercase text-xs tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{downloadingId === art.id ? 'Downloading...' : `Download ${art.name.split(' ')[0]}`}</span>
+                  </button>
+                  <a
+                    href={`/api/ci/download/${art.id}`}
+                    download={art.filename}
+                    className="px-4 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-bold uppercase text-xs tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-neutral-700"
+                    title="Direct Server Download Link (Full Package)"
+                  >
+                    <ExternalLink className="w-4 h-4 text-emerald-400" />
+                    <span className="hidden sm:inline">Direct</span>
+                  </a>
+                </div>
               </div>
             ))}
           </div>

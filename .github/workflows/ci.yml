@@ -43,11 +43,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NODE_ENV: production
 
-      - name: Package Firmware & Android Companion Artifacts
+      - name: Package Firmware & Android Companion Artifacts (Signed in CI)
         run: |
-          mkdir -p dist/artifacts
-          echo "CMF OS v1.5.0-AI Firmware Binary SHA-256" > dist/artifacts/checksums.txt
-          sha256sum dist/index.html >> dist/artifacts/checksums.txt
+          node scripts/generate-artifacts.mjs
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

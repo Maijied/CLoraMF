@@ -14,7 +14,8 @@ import {
   Sparkles, 
   Layers, 
   GitBranch,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { WorkflowRun, PipelineStep, BuildArtifact } from '../types';
@@ -101,14 +102,16 @@ export const CICDPipelineView: React.FC<CICDPipelineViewProps> = ({
     },
     {
       id: 'step_build_apk',
-      name: '3. Assemble Android Companion Application Package (.apk)',
-      command: './gradlew assembleRelease --stacktrace',
+      name: '3. Assemble & Sign Android Companion Application Package (.apk)',
+      command: './gradlew assembleRelease && apksigner sign --ks release.keystore --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true build/outputs/apk/release/cmf-watch-ai-platform-v1.5.0.apk',
       status: 'success',
       durationMs: 14500,
       logs: [
-        '[BUILD] Compiling Android Jetpack Compose UI modules...',
+        '[BUILD] Compiling Android Jetpack Compose UI & BLE 5.3 native modules...',
         '[BUILD] Proguard optimization & resource shrinking complete.',
-        '[BUILD] Generated release signed APK: cmf-watch-ai-platform-v1.5.0.apk (18.45 MB).'
+        '[SIGN] Applying Android apksigner v1/v2/v3 signatures with Release Keystore...',
+        '[SIGN] Signature verification: VALID (APK Signature Scheme v2 & v3 verified).',
+        '[DEPLOY] Deployed signed release artifact to download middleware: cmf-watch-ai-platform-v1.5.0.apk (18.45 MB).'
       ]
     },
     {
@@ -400,16 +403,26 @@ export const CICDPipelineView: React.FC<CICDPipelineViewProps> = ({
                   Size: {(art.sizeBytes / 1024 / 1024).toFixed(2)} MB • v{art.version}
                 </span>
 
-                <button
-                  onClick={async () => {
-                    await triggerArtifactDownload(art);
-                    confetti({ particleCount: 30 });
-                  }}
-                  className="px-3.5 py-1.5 bg-neutral-800 hover:bg-[#FF5C00] hover:text-black text-neutral-200 text-xs font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      await triggerArtifactDownload(art);
+                      confetti({ particleCount: 30 });
+                    }}
+                    className="px-3.5 py-1.5 bg-neutral-800 hover:bg-[#FF5C00] hover:text-black text-neutral-200 text-xs font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </button>
+                  <a
+                    href={`/api/ci/download/${art.id}`}
+                    download={art.filename}
+                    className="p-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-emerald-400 border border-neutral-800 transition-colors"
+                    title="Direct Download Link"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             </div>
           ))}
