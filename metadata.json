@@ -1,0 +1,6 @@
+{
+  "name": "CMF Watch AI Platform",
+  "description": "Advanced AI-powered companion dashboard for CMF Watch 3 Pro with Git integration, health monitoring, and web access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
