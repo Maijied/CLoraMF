@@ -18,7 +18,8 @@ import {
   AlertTriangle,
   Heart,
   Globe,
-  Code2
+  Code2,
+  Smartphone
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { triggerArtifactDownload } from '../utils/artifactGenerator';
@@ -34,6 +35,7 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
   onOpenDashboard
 }) => {
   const [activeSection, setActiveSection] = useState<'overview' | 'downloads' | 'readme' | 'terms' | 'license'>('overview');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const releaseArtifacts: BuildArtifact[] = [
     {
@@ -82,13 +84,20 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
     }
   ];
 
-  const handleDownload = (art: BuildArtifact) => {
-    triggerArtifactDownload(art);
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.7 }
-    });
+  const handleDownload = async (art: BuildArtifact) => {
+    try {
+      setDownloadingId(art.id);
+      await triggerArtifactDownload(art);
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.7 }
+      });
+    } catch (err) {
+      console.error('Download error:', err);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -321,6 +330,23 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
             </a>
           </div>
 
+          {/* Pixel 8 & Android Installation Notice */}
+          <div className="p-4 bg-neutral-900 border-2 border-amber-600/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-white uppercase">Google Pixel 8 & Android 14 Installation Guide</span>
+              </div>
+              <p className="text-neutral-300 text-[11px] leading-relaxed">
+                <strong>1. Progressive Web App (Instant on Pixel 8):</strong> Open this portal in Chrome on your Pixel 8, tap the <strong>⋮ (three dots)</strong> menu, and select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>. It launches fullscreen with native BLE hardware and offline sync support.<br />
+                <strong>2. Standalone APK Package:</strong> Click <strong>"Download Companion"</strong> below. The package includes Dalvik code (DEX), native arm64 BLE libraries, and AndroidManifest configured for Android 14 (API 34).
+              </p>
+            </div>
+            <span className="px-2.5 py-1 bg-amber-950 text-amber-400 border border-amber-700 text-[10px] font-bold uppercase whitespace-nowrap">
+              PIXEL 8 READY
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {releaseArtifacts.map((art) => (
               <div
@@ -360,10 +386,11 @@ export const OSSWebsiteView: React.FC<OSSWebsiteViewProps> = ({
 
                 <button
                   onClick={() => handleDownload(art)}
-                  className="w-full py-3 bg-[#FF5C00] hover:bg-white text-black font-black uppercase text-xs tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  disabled={downloadingId === art.id}
+                  className="w-full py-3 bg-[#FF5C00] hover:bg-white text-black font-black uppercase text-xs tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download {art.name.split(' ')[0]}</span>
+                  <span>{downloadingId === art.id ? 'Packaging Archive...' : `Download ${art.name.split(' ')[0]}`}</span>
                 </button>
               </div>
             ))}

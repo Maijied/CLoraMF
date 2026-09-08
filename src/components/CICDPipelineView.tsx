@@ -401,8 +401,8 @@ export const CICDPipelineView: React.FC<CICDPipelineViewProps> = ({
                 </span>
 
                 <button
-                  onClick={() => {
-                    triggerArtifactDownload(art);
+                  onClick={async () => {
+                    await triggerArtifactDownload(art);
                     confetti({ particleCount: 30 });
                   }}
                   className="px-3.5 py-1.5 bg-neutral-800 hover:bg-[#FF5C00] hover:text-black text-neutral-200 text-xs font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"

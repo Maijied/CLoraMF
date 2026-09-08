@@ -4,23 +4,15 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged,
   type User 
 } from 'firebase/auth';
 import { 
-  getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc, 
   getDocFromServer,
-  setDoc,
-  getDoc,
-  getDocs,
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  deleteDoc,
-  type Unsubscribe
+  type Firestore
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -31,8 +23,16 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Initialize Cloud Firestore with explicit database ID
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Cloud Firestore with explicit database ID and robust multi-tab offline caching
+export const db: Firestore = initializeFirestore(
+  app,
+  {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  },
+  firebaseConfig.firestoreDatabaseId
+);
 
 // Operation types for security and debugging
 export enum OperationType {
@@ -86,14 +86,21 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Connection check on boot
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    // Wrap with a 4-second timeout to avoid 10s hanging in sandboxed iframes
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('the client is offline - connection probe timeout')), 4000)
+    );
+    await Promise.race([
+      getDocFromServer(doc(db, 'test', 'connection')),
+      timeoutPromise
+    ]);
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firestore connection check: client is offline or network is disconnected.");
+    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('offline'))) {
+      console.warn("Firestore operates in offline-first mode (client cache enabled).");
       return false;
     }
-    // Any permission-denied on test doc is normal since test/connection is blocked by security rules
+    // Any permission-denied or other response confirms the backend was reached
     return true;
   }
 }
