@@ -1,0 +1,276 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and CMF Watch companion account details",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 128
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar URL",
+          "maxLength": 1024
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp",
+          "maxLength": 64
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "description": "Last active timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "email"]
+    },
+    "DeviceConfig": {
+      "title": "DeviceConfig",
+      "description": "Paired CMF Watch 3 Pro hardware state, sync settings, and display configuration",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase UID",
+          "maxLength": 128
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Device name (e.g. CMF Watch 3 Pro)",
+          "maxLength": 64
+        },
+        "firmwareVersion": {
+          "type": "string",
+          "description": "Installed RTOS firmware version",
+          "maxLength": 32
+        },
+        "activeFaceId": {
+          "type": "string",
+          "description": "Currently active dial ID",
+          "maxLength": 64
+        },
+        "autoSyncEnabled": {
+          "type": "boolean",
+          "description": "Whether cloud and BLE auto-sync is active"
+        },
+        "battery": {
+          "type": "number",
+          "description": "Battery percentage (0-100)"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "description": "Human readable last sync string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last cloud update",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "deviceName", "firmwareVersion", "activeFaceId", "autoSyncEnabled"]
+    },
+    "VitalLog": {
+      "title": "VitalLog",
+      "description": "Time-series biometric health telemetry record from CMF Watch sensors",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase UID",
+          "maxLength": 128
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Epoch millisecond timestamp"
+        },
+        "heartRate": {
+          "type": "number",
+          "description": "Heart rate in BPM"
+        },
+        "steps": {
+          "type": "number",
+          "description": "Accumulated step count"
+        },
+        "calories": {
+          "type": "number",
+          "description": "Active burnt calories in kcal"
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "Distance traveled in kilometers"
+        },
+        "sleepHours": {
+          "type": "number",
+          "description": "Sleep duration in hours"
+        }
+      },
+      "required": ["userId", "timestamp", "heartRate", "steps", "calories"]
+    },
+    "CustomWatchFace": {
+      "title": "CustomWatchFace",
+      "description": "User-crafted or modified custom watch face layout",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Author UID",
+          "maxLength": 128
+        },
+        "faceId": {
+          "type": "string",
+          "description": "Unique watch face ID",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "description": "Watch face display title",
+          "maxLength": 64
+        },
+        "style": {
+          "type": "string",
+          "description": "Visual style descriptor",
+          "maxLength": 32
+        },
+        "activeThemeId": {
+          "type": "string",
+          "description": "Theme color palette ID",
+          "maxLength": 32
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating score"
+        },
+        "author": {
+          "type": "string",
+          "description": "Creator signature",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["userId", "faceId", "name", "style", "activeThemeId"]
+    },
+    "SDKProject": {
+      "title": "SDKProject",
+      "description": "User created CMF Watch app package and source code in the SDK Studio",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Developer UID",
+          "maxLength": 128
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Unique package ID (e.g. io.cmf.heartbeats)",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "App Name",
+          "maxLength": 64
+        },
+        "version": {
+          "type": "string",
+          "description": "Semver version string",
+          "maxLength": 32
+        },
+        "category": {
+          "type": "string",
+          "description": "App store category",
+          "maxLength": 32
+        },
+        "code": {
+          "type": "string",
+          "description": "JavaScript/TypeScript source bytecode",
+          "maxLength": 65536
+        },
+        "manifestJson": {
+          "type": "string",
+          "description": "Raw manifest JSON string",
+          "maxLength": 4096
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["userId", "projectId", "name", "version", "code"]
+    },
+    "AIInteraction": {
+      "title": "AIInteraction",
+      "description": "AI Health recommendation or diagnostic prompt query and response",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User UID",
+          "maxLength": 128
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Input prompt to Gemini AI",
+          "maxLength": 2048
+        },
+        "response": {
+          "type": "string",
+          "description": "Generated AI medical or lifestyle recommendation",
+          "maxLength": 4096
+        },
+        "actionType": {
+          "type": "string",
+          "description": "Dispatched action category",
+          "maxLength": 64
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Interaction timestamp"
+        }
+      },
+      "required": ["userId", "prompt", "response", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Top-level user profile record"
+    },
+    "/users/{userId}/device/{deviceId}": {
+      "schema": "DeviceConfig",
+      "description": "CMF Watch hardware and settings sync document"
+    },
+    "/users/{userId}/vitals/{vitalId}": {
+      "schema": "VitalLog",
+      "description": "Logged biometric health data points"
+    },
+    "/users/{userId}/customFaces/{faceId}": {
+      "schema": "CustomWatchFace",
+      "description": "User-designed custom watch dials"
+    },
+    "/users/{userId}/sdkProjects/{projectId}": {
+      "schema": "SDKProject",
+      "description": "Developer SDK workspace code and apps"
+    },
+    "/users/{userId}/aiLogs/{logId}": {
+      "schema": "AIInteraction",
+      "description": "AI health advice and recommendation logs"
+    }
+  }
+}

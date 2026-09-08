@@ -26,7 +26,14 @@ import {
   ChevronRight,
   Globe,
   FileCode2,
-  Workflow
+  Workflow,
+  Cloud,
+  CloudCheck,
+  CloudAlert,
+  LogIn,
+  LogOut,
+  User as UserIcon,
+  Database
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -45,6 +52,7 @@ import {
   LATEST_FIRMWARE_INFO 
 } from './mockData';
 
+import { useFirebase } from './context/FirebaseContext';
 import { WatchDevicePreview } from './components/WatchDevicePreview';
 import { WatchFaceManager } from './components/WatchFaceManager';
 import { FirmwareManager } from './components/FirmwareManager';
@@ -57,6 +65,21 @@ import { CICDPipelineView } from './components/CICDPipelineView';
 import { OSSWebsiteView } from './components/OSSWebsiteView';
 
 export default function App() {
+  const {
+    user,
+    loading: authLoading,
+    cloudSyncStatus,
+    lastCloudSyncTime,
+    vitalsHistory,
+    cloudCustomFaces,
+    cloudSDKProjects,
+    login,
+    logout,
+    saveDeviceState,
+    recordVital,
+    saveCustomFace
+  } = useFirebase();
+
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'watchfaces' | 'store' | 'sdk' | 'firmware' | 'ble' | 'ai' | 'git' | 'cicd' | 'website'
   >('dashboard');
@@ -86,11 +109,11 @@ export default function App() {
   const [activeNotification, setActiveNotification] = useState<WatchNotificationPayload | null>({
     id: 'notif_welcome',
     title: 'BLE 5.3 LINK ESTABLISHED',
-    message: 'CMF Watch 3 Pro paired with Companion AI Platform.',
+    message: 'CMF Watch 3 Pro paired with Companion AI Platform & Firestore.',
     timestamp: Date.now()
   });
 
-  // Background Auto-Sync Simulation
+  // Background Auto-Sync Simulation & Firestore Cloud Sync
   useEffect(() => {
     if (!autoSyncEnabled || !watchStatus.connected) return;
 
@@ -100,18 +123,31 @@ export default function App() {
       const newHr = Math.max(58, Math.min(150, watchStatus.heartRateCurrent + hrDelta));
       const newSteps = watchStatus.stepsCurrent + Math.floor(Math.random() * 6);
       const newCalories = watchStatus.caloriesCurrent + (Math.random() > 0.5 ? 1 : 0);
+      const syncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
       setWatchStatus(prev => ({
         ...prev,
         heartRateCurrent: newHr,
         stepsCurrent: newSteps,
         caloriesCurrent: newCalories,
-        lastSync: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        lastSync: syncTime
       }));
+
+      // Periodic Firestore vital telemetry logging if authenticated
+      if (user && Math.random() > 0.4) {
+        recordVital({
+          timestamp: Date.now(),
+          heartRate: newHr,
+          steps: newSteps,
+          calories: newCalories,
+          distanceKm: watchStatus.distanceKm,
+          sleepHours: watchStatus.sleepHours
+        });
+      }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [autoSyncEnabled, watchStatus.connected, watchStatus.heartRateCurrent, watchStatus.stepsCurrent, watchStatus.caloriesCurrent]);
+  }, [autoSyncEnabled, watchStatus.connected, watchStatus.heartRateCurrent, watchStatus.stepsCurrent, watchStatus.caloriesCurrent, user]);
 
   const activeWatchFace = watchFaces.find(f => f.id === watchStatus.activeFaceId) || watchFaces[0];
   const hasFirmwareUpdate = watchStatus.firmwareVersion !== LATEST_FIRMWARE_INFO.version;
@@ -120,12 +156,21 @@ export default function App() {
     setWatchFaces(prev => prev.map(f => ({ ...f, isActive: f.id === faceId })));
     setWatchStatus(prev => ({ ...prev, activeFaceId: faceId }));
     setRunningApp(null); // Return to watchface dial
+
+    if (user) {
+      saveDeviceState({ ...watchStatus, activeFaceId: faceId }, autoSyncEnabled);
+    }
   };
 
   const handleInstallNewFace = (face: WatchFace) => {
     setWatchFaces(prev => [face, ...prev]);
     setWatchStatus(prev => ({ ...prev, activeFaceId: face.id }));
     setRunningApp(null);
+
+    if (user) {
+      saveCustomFace(face);
+      saveDeviceState({ ...watchStatus, activeFaceId: face.id }, autoSyncEnabled);
+    }
   };
 
   const handleUpdateFaceTheme = (faceId: string, themeId: string) => {
@@ -144,6 +189,10 @@ export default function App() {
       message: `Running CMF OS v${newVersion} on RTOS kernel.`,
       timestamp: Date.now()
     });
+
+    if (user) {
+      saveDeviceState({ ...watchStatus, firmwareVersion: newVersion }, autoSyncEnabled);
+    }
   };
 
   const handleTestAppOnWatch = (app: CustomAppPackage) => {
@@ -178,6 +227,26 @@ export default function App() {
     } else if (action.type === 'health_alert') {
       setActiveTab('dashboard');
     }
+  };
+
+  const handleManualCloudSave = async () => {
+    if (!user) {
+      try {
+        await login();
+      } catch (e) {
+        return;
+      }
+    }
+    await saveDeviceState(watchStatus, autoSyncEnabled);
+    await recordVital({
+      timestamp: Date.now(),
+      heartRate: watchStatus.heartRateCurrent,
+      steps: watchStatus.stepsCurrent,
+      calories: watchStatus.caloriesCurrent,
+      distanceKm: watchStatus.distanceKm,
+      sleepHours: watchStatus.sleepHours
+    });
+    confetti({ particleCount: 40 });
   };
 
   const navItems = [
@@ -224,8 +293,66 @@ export default function App() {
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
           
+          {/* Firestore Cloud Sync Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-neutral-800 text-xs">
+            {cloudSyncStatus === 'syncing' ? (
+              <Cloud className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+            ) : cloudSyncStatus === 'synced' ? (
+              <CloudCheck className="w-3.5 h-3.5 text-emerald-400" />
+            ) : user ? (
+              <Database className="w-3.5 h-3.5 text-[#FF5C00]" />
+            ) : (
+              <CloudAlert className="w-3.5 h-3.5 text-neutral-500" />
+            )}
+            <div className="flex flex-col text-left">
+              <span className="text-[9px] font-bold uppercase text-neutral-300 leading-tight">
+                {user ? (cloudSyncStatus === 'syncing' ? 'Syncing...' : 'Firestore') : 'Local'}
+              </span>
+              <span className="text-[8px] text-neutral-500 leading-tight">
+                {user ? (lastCloudSyncTime ? `Synced ${lastCloudSyncTime}` : 'Connected') : 'Sign in to cloud'}
+              </span>
+            </div>
+          </div>
+
+          {/* Firebase User Auth Pill */}
+          {user ? (
+            <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-2 py-1">
+              {user.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName || 'User'} 
+                  referrerPolicy="no-referrer"
+                  className="w-5 h-5 rounded-full border border-neutral-700" 
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#FF5C00] text-black font-black text-[10px] flex items-center justify-center">
+                  {(user.email?.[0] || 'U').toUpperCase()}
+                </div>
+              )}
+              <span className="hidden xl:inline text-[10px] text-neutral-300 font-bold truncate max-w-[120px]">
+                {user.displayName || user.email?.split('@')[0]}
+              </span>
+              <button
+                onClick={logout}
+                title="Sign out of Firebase"
+                className="p-1 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={login}
+              disabled={authLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#FF5C00] hover:bg-white text-black font-black text-xs uppercase transition-colors cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          )}
+
           {/* Quick Portal Switcher */}
           <button
             onClick={() => setActiveTab('website')}
@@ -522,6 +649,79 @@ export default function App() {
                   >
                     Open AI Console
                   </button>
+                </div>
+
+                {/* Firestore Cloud Sync & Persistence Section */}
+                <div className="p-6 bg-neutral-900 border-2 border-neutral-800 font-mono space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/30">
+                        <Database className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold uppercase text-white">
+                            Google Cloud Firestore Persistence
+                          </h4>
+                          <span className="px-1.5 py-0.2 bg-emerald-950 text-emerald-400 text-[8px] font-black border border-emerald-800 uppercase">
+                            Zero-Trust Hardened
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          {user 
+                            ? `Authenticated as ${user.email} (UID: ${user.uid.slice(0, 8)}...)` 
+                            : 'Sign in to automatically sync telemetry, custom dials, and SDK apps across devices.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {user ? (
+                        <button
+                          onClick={handleManualCloudSave}
+                          className="px-4 py-2 bg-[#FF5C00] hover:bg-white text-black font-black text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Cloud className="w-3.5 h-3.5" />
+                          <span>Push Cloud Snapshot</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={login}
+                          className="px-4 py-2 bg-[#FF5C00] hover:bg-white text-black font-black text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          <span>Authenticate Cloud</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cloud Collections Status Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 bg-neutral-950 border border-neutral-800">
+                      <span className="text-[10px] text-neutral-500 uppercase block font-bold">Vitals Logs</span>
+                      <span className="text-base font-black text-white">{vitalsHistory.length} Recorded</span>
+                      <span className="text-[9px] text-emerald-400 block mt-1">Real-time Stream</span>
+                    </div>
+
+                    <div className="p-3 bg-neutral-950 border border-neutral-800">
+                      <span className="text-[10px] text-neutral-500 uppercase block font-bold">Cloud Faces</span>
+                      <span className="text-base font-black text-white">{cloudCustomFaces.length} Synced</span>
+                      <span className="text-[9px] text-neutral-400 block mt-1">Custom Dials</span>
+                    </div>
+
+                    <div className="p-3 bg-neutral-950 border border-neutral-800">
+                      <span className="text-[10px] text-neutral-500 uppercase block font-bold">SDK Projects</span>
+                      <span className="text-base font-black text-white">{cloudSDKProjects.length} Cloud Apps</span>
+                      <span className="text-[9px] text-neutral-400 block mt-1">Bytecode Store</span>
+                    </div>
+
+                    <div className="p-3 bg-neutral-950 border border-neutral-800">
+                      <span className="text-[10px] text-neutral-500 uppercase block font-bold">Security Rules</span>
+                      <span className="text-base font-black text-emerald-400">Pillars 1-8</span>
+                      <span className="text-[9px] text-neutral-400 block mt-1">Strict RBAC</span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}

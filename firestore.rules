@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security Primitives and Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Entity Validations
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'email']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+        (!('lastActiveAt' in data) || (data.lastActiveAt is string && data.lastActiveAt.size() <= 64));
+    }
+
+    function isValidDeviceConfig(data) {
+      return data.keys().hasAll(['userId', 'deviceName', 'firmwareVersion', 'activeFaceId', 'autoSyncEnabled']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.deviceName is string && data.deviceName.size() <= 64 &&
+        data.firmwareVersion is string && data.firmwareVersion.size() <= 32 &&
+        data.activeFaceId is string && data.activeFaceId.size() <= 64 &&
+        data.autoSyncEnabled is bool &&
+        (!('battery' in data) || (data.battery is number && data.battery >= 0 && data.battery <= 100)) &&
+        (!('lastSyncTime' in data) || (data.lastSyncTime is string && data.lastSyncTime.size() <= 64)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidVitalLog(data) {
+      return data.keys().hasAll(['userId', 'timestamp', 'heartRate', 'steps', 'calories']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.timestamp is number &&
+        data.heartRate is number && data.heartRate >= 30 && data.heartRate <= 250 &&
+        data.steps is number && data.steps >= 0 &&
+        data.calories is number && data.calories >= 0 &&
+        (!('distanceKm' in data) || (data.distanceKm is number && data.distanceKm >= 0)) &&
+        (!('sleepHours' in data) || (data.sleepHours is number && data.sleepHours >= 0 && data.sleepHours <= 24));
+    }
+
+    function isValidCustomWatchFace(data) {
+      return data.keys().hasAll(['userId', 'faceId', 'name', 'style', 'activeThemeId']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.faceId is string && data.faceId.size() <= 64 &&
+        data.name is string && data.name.size() <= 64 &&
+        data.style is string && data.style.size() <= 32 &&
+        data.activeThemeId is string && data.activeThemeId.size() <= 32 &&
+        (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5)) &&
+        (!('author' in data) || (data.author is string && data.author.size() <= 64)) &&
+        (!('createdAt' in data) || (data.createdAt is number));
+    }
+
+    function isValidSDKProject(data) {
+      return data.keys().hasAll(['userId', 'projectId', 'name', 'version', 'code']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.name is string && data.name.size() <= 64 &&
+        data.version is string && data.version.size() <= 32 &&
+        data.code is string && data.code.size() <= 65536 &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 32)) &&
+        (!('manifestJson' in data) || (data.manifestJson is string && data.manifestJson.size() <= 4096)) &&
+        (!('updatedAt' in data) || (data.updatedAt is number));
+    }
+
+    function isValidAIInteraction(data) {
+      return data.keys().hasAll(['userId', 'prompt', 'response', 'timestamp']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.prompt is string && data.prompt.size() <= 2048 &&
+        data.response is string && data.response.size() <= 4096 &&
+        data.timestamp is number &&
+        (!('actionType' in data) || (data.actionType is string && data.actionType.size() <= 64));
+    }
+
+    // User Profile Document Rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+
+      // Subcollection: Device Config
+      match /device/{deviceId} {
+        allow get: if isOwner(userId) && isValidId(deviceId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(deviceId) && isValidDeviceConfig(incoming());
+        allow update: if isOwner(userId) && isValidId(deviceId) && isValidDeviceConfig(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(deviceId);
+      }
+
+      // Subcollection: Biometric Vitals Telemetry History
+      match /vitals/{vitalId} {
+        allow get: if isOwner(userId) && isValidId(vitalId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming());
+        allow update: if isOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(vitalId);
+      }
+
+      // Subcollection: Custom Watch Faces
+      match /customFaces/{faceId} {
+        allow get: if isOwner(userId) && isValidId(faceId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(faceId) && isValidCustomWatchFace(incoming());
+        allow update: if isOwner(userId) && isValidId(faceId) && isValidCustomWatchFace(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(faceId);
+      }
+
+      // Subcollection: Developer SDK Projects
+      match /sdkProjects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(projectId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(projectId) && isValidSDKProject(incoming());
+        allow update: if isOwner(userId) && isValidId(projectId) && isValidSDKProject(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(projectId);
+      }
+
+      // Subcollection: AI Recommendations & Queries
+      match /aiLogs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(logId) && isValidAIInteraction(incoming());
+        allow update: if isOwner(userId) && isValidId(logId) && isValidAIInteraction(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+    }
+  }
+}
