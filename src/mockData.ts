@@ -517,6 +517,13 @@ export const INITIAL_GIT_REPOS: GitRepo[] = [
 
 export const INITIAL_COMMITS: GitCommitInfo[] = [
   {
+    hash: '1e40188',
+    message: 'ci: fix GitHub Actions workflow dependencies and lockfile setup',
+    author: 'mdshuvo <mdshuvo40@gmail.com>',
+    timestamp: Date.now() - 60000 * 5,
+    tag: 'ci-fixed'
+  },
+  {
     hash: '7e4b91f',
     message: 'feat: add OTA firmware updater and SDK builder',
     author: 'mdshuvo <mdshuvo40@gmail.com>',
