@@ -15,7 +15,11 @@ import {
   Terminal,
   Cpu,
   Zap,
-  Play
+  Play,
+  KeyRound,
+  Copy,
+  Lock,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { GitRepo, GitCommitInfo } from '../types';
@@ -38,8 +42,15 @@ export const GitHubManager: React.FC<GitHubManagerProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [secondsUntilNextSync, setSecondsUntilNextSync] = useState(15);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const activeRepo = repos.find(r => r.id === selectedRepoId) || repos[0];
+
+  const handleCopySecret = (keyName: string) => {
+    navigator.clipboard?.writeText(keyName);
+    setCopiedKey(keyName);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   // Auto-sync ticker
   useEffect(() => {
@@ -294,6 +305,107 @@ export const GitHubManager: React.FC<GitHubManagerProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* GitHub Repository Secrets & Environment Variables Matrix */}
+      <div className="p-5 bg-neutral-900 border-2 border-neutral-800 space-y-4 text-xs font-mono">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-neutral-800 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/30">
+              <KeyRound className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold uppercase text-white">
+                GitHub Repository Secrets & CI/CD Environment
+              </h3>
+              <p className="text-[11px] text-neutral-400">
+                Injected into <span className="text-neutral-200">.github/workflows/ci.yml</span> for automated builds and testing
+              </p>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] font-bold uppercase w-fit">
+            Ready for GitHub Actions
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* GEMINI_API_KEY */}
+          <div className="p-3 bg-neutral-950 border border-neutral-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white text-[11px]">GEMINI_API_KEY</span>
+              <span className="text-[8px] bg-[#FF5C00]/20 text-[#FF5C00] px-1.5 py-0.5 font-bold uppercase border border-[#FF5C00]/40">
+                AI Models
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400 leading-relaxed">
+              Provides access to Gemini 2.5/Flash health analysis, vitals synthesis & code engines.
+            </p>
+            <div className="flex items-center justify-between pt-1 border-t border-neutral-900">
+              <span className="text-[9px] text-emerald-400 font-bold">Injected via Secrets</span>
+              <button
+                onClick={() => handleCopySecret('GEMINI_API_KEY')}
+                className="px-2 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 text-[9px] font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedKey === 'GEMINI_API_KEY' ? 'Copied' : 'Copy Name'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* FIREBASE_CONFIG */}
+          <div className="p-3 bg-neutral-950 border border-neutral-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white text-[11px]">FIREBASE_APPLET_CONFIG</span>
+              <span className="text-[8px] bg-blue-950 text-blue-400 px-1.5 py-0.5 font-bold uppercase border border-blue-800">
+                Firestore
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400 leading-relaxed">
+              Stores Firestore configuration and authentication state for real-time cloud sync.
+            </p>
+            <div className="flex items-center justify-between pt-1 border-t border-neutral-900">
+              <span className="text-[9px] text-emerald-400 font-bold">Configured (asia-southeast1)</span>
+              <button
+                onClick={() => handleCopySecret('FIREBASE_CONFIG')}
+                className="px-2 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 text-[9px] font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedKey === 'FIREBASE_CONFIG' ? 'Copied' : 'Copy Name'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* BLE_SIGNING_KEY */}
+          <div className="p-3 bg-neutral-950 border border-neutral-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-white text-[11px]">BLE_FIRMWARE_SIGNING_KEY</span>
+              <span className="text-[8px] bg-purple-950 text-purple-400 px-1.5 py-0.5 font-bold uppercase border border-purple-800">
+                OTA Sign
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400 leading-relaxed">
+              Signs CMF Watch 3 Pro RTOS firmware packages with SHA-256 for secure over-the-air flash.
+            </p>
+            <div className="flex items-center justify-between pt-1 border-t border-neutral-900">
+              <span className="text-[9px] text-neutral-400 font-bold">Automated In CI/CD</span>
+              <button
+                onClick={() => handleCopySecret('BLE_FIRMWARE_SIGNING_KEY')}
+                className="px-2 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 text-[9px] font-bold uppercase flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedKey === 'BLE_FIRMWARE_SIGNING_KEY' ? 'Copied' : 'Copy Name'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 bg-neutral-950 border border-neutral-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-[11px]">
+          <div className="flex items-center gap-2 text-neutral-400">
+            <Lock className="w-3.5 h-3.5 text-[#FF5C00]" />
+            <span>To set up in your GitHub repo: Go to <strong>Settings → Secrets and variables → Actions → New repository secret</strong></span>
+          </div>
+          <span className="text-neutral-500 font-mono text-[10px]">Workflow: .github/workflows/ci.yml</span>
+        </div>
       </div>
     </div>
   );

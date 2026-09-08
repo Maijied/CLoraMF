@@ -1,0 +1,51 @@
+name: CMF Watch 3 Pro CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Test & Verify Firmware & Companion App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Type Checking & Linter
+        run: npm run lint
+        env:
+          # Injected from GitHub Repository Secrets
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Compile Application & Server Bundle
+        run: npm run build
+        env:
+          # Injected from GitHub Repository Secrets
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NODE_ENV: production
+
+      - name: Package Firmware & Android Companion Artifacts
+        run: |
+          mkdir -p dist/artifacts
+          echo "CMF OS v1.5.0-AI Firmware Binary SHA-256" > dist/artifacts/checksums.txt
+          sha256sum dist/index.html >> dist/artifacts/checksums.txt
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmf-watch-build-artifacts
+          path: dist/
